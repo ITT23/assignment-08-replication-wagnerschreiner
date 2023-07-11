@@ -23,6 +23,8 @@ result_text = pyglet.text.Label("Gesture:   ", x=window.width-150, y=window.heig
 def on_key_press(symbol, modifiers):
     if symbol == pyglet.window.key.Q:
         sys.exit(0)
+    elif symbol == pyglet.window.key.Q:
+        line.clear()
 
 @window.event
 def on_draw():
