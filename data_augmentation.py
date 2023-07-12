@@ -1,82 +1,117 @@
 import numpy as np
 from scipy.signal import resample
-import xml.etree.ElementTree as ET
-import os
-from sklearn.preprocessing import StandardScaler
+from scipy.spatial.transform import Rotation as R
 
-def load_data(gestures):
-    data = []
-    labels = []
-
-    for root, subdirs, files in os.walk('dataset/xml_logs'):
-        if 'ipynb_checkpoint' in root:
-            continue
-        
-        if len(files) > 0:
-            for f in files:
-                if '.xml' in f:
-                    fname = f.split('.')[0]
-                    label = fname[:-2]
-                    
-                    xml_root = ET.parse(f'{root}/{f}').getroot()
-                    
-                    points = []
-                    for element in xml_root.findall('Point'):
-                        x = element.get('X')
-                        y = element.get('Y')
-                        points.append([x, y])
-                        
-                    points = np.array(points, dtype=float)
-                    
-                    scaler = StandardScaler()
-                    points = scaler.fit_transform(points)
-                    
-                    resampled = resample(points, 64)
-                    
-                    if not label in labels and label in gestures:
-                        data.append((label, resampled))
-                        labels.append(label)
-
-                    if len(labels) == len(gestures):
-                        print("all files loaded successfully", len(data))
-                        return data
-
-    print("all files loaded successfully", len(data))
-
-    return data
+import config
 
 
-# add noise (uniform, gaussian, perlin noise)
-def add_gaussian_noise(sequence):
-    noise = np.random.normal(0, 0.08, sequence.shape) # the authors use sigma=0.08
-    noise_seq = sequence + noise
-    return noise_seq
+class Augmenter():
+    def __init__(self, gestures) -> None:
+        self.gestures = gestures
 
-# scaling
-def scaling(sequence):
-    centroid = np.mean(sequence)
-    rnd = np.random.uniform(0.8, 1.2) 
-    points = sequence - centroid
-    scaled_seq = points * rnd
-    scaled_seq += centroid
-    return scaled_seq
+    def get_avc_set(self):
+        training_set = []
+        for gesture in self.gestures:
+            label = gesture[0]
+            original_points = gesture[1]
+            for i in range(config.NUMBER_OF_SAMPLES):
+                training_set.append(
+                    [label, self.avc_transformation(original_points)])
+        return training_set
 
-# rotation
+    def avc_transformation(self, sequence):
+        noise_seq = self.add_gaussian_noise(sequence)
+        skipped_seq = self.skip_frames(noise_seq)
+        resampled_seq = self.spatial_resampling(skipped_seq)
+        persp_seq = self.perspective_change(resampled_seq)
+        rotated_seq = self.rotate(persp_seq)
+        scaled_seq = self.scaling(rotated_seq)
+        return scaled_seq
 
-# shearing: results in stretching of the original trajectory along a line
+    # add noise (uniform, gaussian, perlin noise)
+    def add_gaussian_noise(self, sequence):
+        # the authors use sigma=0.08
+        noise = np.random.normal(
+            0, config.GAUSSIAN_NOISE_SIGMA, sequence.shape)
+        noise_seq = sequence + noise
+        return noise_seq
 
-# perspective change: rotating the trajectory around the x and y axes (adding 3rd dimension & multiplying points by the x and y rotation matrices)
+    # scaling
+    def scaling(self, sequence):
+        centroid = np.mean(sequence)
+        rnd_x = np.random.uniform(
+            config.SCALING_LOWER_BOUND, config.SCALING_UPPER_BOUND)
+        rnd_y = np.random.uniform(
+            config.SCALING_LOWER_BOUND, config.SCALING_UPPER_BOUND)
+        points = sequence - centroid
+        scaled_seq = []
+        for x, y in points:
+            scaled_x = x*rnd_x
+            scaled_y = y*rnd_y
+            scaled_seq.append([scaled_x, scaled_y])
+        scaled_seq += centroid
+        return scaled_seq
 
-# spatial resampling: generate list of distance intervals & using the list to sample points along the trajectory
+    def spatial_resampling(self, sequence):
+        resampled_seq = resample(sequence, np.random.randint(
+            config.SPATIAL_RESAMPLING_LOWER_BOUND, len(sequence)*2))
+        return np.array(resampled_seq)
 
-# temporal resampling: list of intervals in time domain
+    def perspective_change(self, sequence):
+        persp_seq = []
+        centroid = np.mean(sequence)
+        y_angle = np.random.randint(
+            config.PERSPECTIVE_CHANGE_MIN_ANGLE, config.PERSPECTIVE_CHANGE_MAX_ANGLE)
+        x_angle = np.random.randint(
+            config.PERSPECTIVE_CHANGE_MIN_ANGLE, config.PERSPECTIVE_CHANGE_MAX_ANGLE)
+        r = R.from_euler('yx', [y_angle, x_angle], degrees=True)
+        sequence = sequence - centroid
+        mat = r.as_matrix()
+        for point in sequence:
+            point = np.append(point, 1)
+            new_point = np.array(mat @ point)
+            persp_seq.append(new_point[:-1])
+        persp_seq += centroid
+        return persp_seq
 
-# temporal jitter: special case of temporal resampling with varying intervals
+    def skip_frames(self, sequence):
+        skipped_seq = []
+        for point in sequence:
+            if np.random.uniform(low=0, high=1.0) >= config.SKIP_FRAME_CHANCE:
+                skipped_seq.append(point)
+        return np.asarray(skipped_seq)
 
-# time stretching: duplicating random subset of points in a trajectory
+    def rotate(self, sequence):
+        centroid = np.mean(sequence)
+        points = sequence - centroid
+        angle = np.random.randint(0, high=config.ROTATION_MAX_ANGLE)
+        r = R.from_euler('z', angle, degrees=True)
+        mat = r.as_matrix()
+        points_transformed = []
+        for p in points:
+            p = np.append(p, 1)
+            result = np.array(mat @ p)
+            result /= result[2]
+            points_transformed.append(result[:-1])
+        points_transformed += centroid
+        return points_transformed
 
-# frame skipping: removal of some points from the trajectory
+    # rotation
 
-# bezier and spline deformation: finding reasonable control points, pertubing them and fitting the new points to a spline curve
+    # shearing: results in stretching of the original trajectory along a line
 
-# random erasing: replace some of the trajectory with values of 0
+    # perspective change: rotating the trajectory around the x and y axes (adding 3rd dimension & multiplying points by the x and y rotation matrices)
+
+    # spatial resampling: generate list of distance intervals & using the list to sample points along the trajectory
+
+    # temporal resampling: list of intervals in time domain
+
+    # temporal jitter: special case of temporal resampling with varying intervals
+
+    # time stretching: duplicating random subset of points in a trajectory
+
+    # frame skipping: removal of some points from the trajectory
+
+    # bezier and spline deformation: finding reasonable control points, pertubing them and fitting the new points to a spline curve
+
+    # random erasing: replace some of the trajectory with values of 0
