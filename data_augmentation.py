@@ -84,7 +84,8 @@ class Augmenter():
     def rotate(self, sequence):
         centroid = np.mean(sequence)
         points = sequence - centroid
-        angle = np.random.randint(0, high=config.ROTATION_MAX_ANGLE)
+        angle = np.random.randint(
+            low=config.ROTATION_MIN_ANGLE, high=config.ROTATION_MAX_ANGLE)
         r = R.from_euler('z', angle, degrees=True)
         mat = r.as_matrix()
         points_transformed = []
