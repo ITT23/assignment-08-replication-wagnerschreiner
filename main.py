@@ -2,9 +2,9 @@ import os
 import pyglet
 from pyglet import shapes
 import sys
-from unistroke_model import UniStroke
+from model import Model
 
-gestures = ['rectangle', 'circle', 'delete']
+gestures = ['arrow', 'caret', 'check']
 
 # pyglet application
 window = pyglet.window.Window(fullscreen=True)
@@ -13,7 +13,7 @@ window = pyglet.window.Window(fullscreen=True)
 line = []
 
 # init of lstm
-recognizer = UniStroke()
+recognizer = Model()
 
 result_text = pyglet.text.Label("Gesture:   ", x=window.width-150, y=window.height-20, anchor_x='center', anchor_y='center', font_size=20)
 
@@ -39,11 +39,11 @@ def on_draw():
 def on_mouse_release(x, y, button, modifiers):
     window.clear()
     if pyglet.window.mouse.LEFT:
-        prediction = recognizer.predict_gesture(recognizer.model_32, recognizer.encoder, line)
+        prediction = recognizer.predict_gesture(line)
         # if gesture is recognized as one of the 3 defined, start the corresponding application
         for gesture in gestures:
             if prediction == gesture:
-                print("RESULT", prediction[0])
+                print("RESULT", prediction)
                 line.clear()
                 result_text.text = "Gesture:   " + prediction[0]
                 result_text.draw()
