@@ -52,11 +52,13 @@ class Augmenter():
         scaled_seq += centroid
         return scaled_seq
 
+    # spatial resampling: generate list of distance intervals & using the list to sample points along the trajectory
     def spatial_resampling(self, sequence):
         resampled_seq = resample(sequence, np.random.randint(
             config.SPATIAL_RESAMPLING_LOWER_BOUND, len(sequence)*2))
         return np.array(resampled_seq)
 
+    # perspective change: rotating the trajectory around the x and y axes (adding 3rd dimension & multiplying points by the x and y rotation matrices)
     def perspective_change(self, sequence):
         persp_seq = []
         centroid = np.mean(sequence)
@@ -74,6 +76,7 @@ class Augmenter():
         persp_seq += centroid
         return persp_seq
 
+    # frame skipping: removal of some points from the trajectory
     def skip_frames(self, sequence):
         skipped_seq = []
         for point in sequence:
@@ -81,6 +84,7 @@ class Augmenter():
                 skipped_seq.append(point)
         return np.asarray(skipped_seq)
 
+    # rotation
     def rotate(self, sequence):
         centroid = np.mean(sequence)
         points = sequence - centroid
@@ -97,21 +101,14 @@ class Augmenter():
         points_transformed += centroid
         return points_transformed
 
-    # rotation
 
     # shearing: results in stretching of the original trajectory along a line
-
-    # perspective change: rotating the trajectory around the x and y axes (adding 3rd dimension & multiplying points by the x and y rotation matrices)
-
-    # spatial resampling: generate list of distance intervals & using the list to sample points along the trajectory
 
     # temporal resampling: list of intervals in time domain
 
     # temporal jitter: special case of temporal resampling with varying intervals
 
     # time stretching: duplicating random subset of points in a trajectory
-
-    # frame skipping: removal of some points from the trajectory
 
     # bezier and spline deformation: finding reasonable control points, pertubing them and fitting the new points to a spline curve
 
