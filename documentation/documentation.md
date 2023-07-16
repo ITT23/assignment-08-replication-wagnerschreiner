@@ -47,3 +47,5 @@ Iravantchi, Y., Zhao, Y., Kin, K., & Sample, A. P. (2023, April). SAWSense: Usin
 Maslych, M., Taranta, E. M., Aldilati, M., & Laviola, J. J. (2023, April). Effective 2D Stroke-based Gesture Augmentation for RNNs. In Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems (pp. 1-13). https://dl.acm.org/doi/10.1145/3544548.3581358
 
 Wilson, A. D. (2006, October). Robust computer vision-based detection of pinching for one and two-handed gesture input. In Proceedings of the 19th annual ACM symposium on User interface software and technology (pp. 255-258).
+
+Vectors and icons by [SVG Repo](https://www.svgrepo.com)
