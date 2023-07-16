@@ -1,3 +1,5 @@
+from enum import Enum
+
 GAUSSIAN_NOISE_SIGMA = 0.8
 SCALING_LOWER_BOUND = 0.8
 SCALING_UPPER_BOUND = 1.2
@@ -8,3 +10,8 @@ ROTATION_MIN_ANGLE = -20
 ROTATION_MAX_ANGLE = 20
 SKIP_FRAME_CHANCE = 0.3
 NUMBER_OF_SAMPLES = 512
+
+
+class AugmentationPipelines(Enum):
+    AVC = "AVC"
+    SIMPLE = "Simple Chain"
