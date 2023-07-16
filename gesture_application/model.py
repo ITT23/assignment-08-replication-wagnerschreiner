@@ -1,3 +1,6 @@
+'''
+This module trains the RNN model and predicts new gestures.
+'''
 import os
 
 import config as config
@@ -15,6 +18,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class Model(QObject):
+    '''
+    This class inherites from PyQt QObject to implement thread functionalities.
+    '''
     finished = pyqtSignal()
     progress = pyqtSignal(int)
 
@@ -25,6 +31,9 @@ class Model(QObject):
         self.training_set = training_set
 
     def load_data(self):
+        '''
+        Encodes augmented gesture set and splits it into training and test data.
+        '''
         self.labels = [sample[0] for sample in self.training_set]
         print(set(self.labels))
 
@@ -47,6 +56,9 @@ class Model(QObject):
         return X_train, X_test, y_train, y_test
 
     def run(self):
+        '''
+        Sets up RNN and handles PyQt QThread callbacks.
+        '''
         self.X_train, self.X_test, self.y_train, self.y_test = self.load_data()
         # Define the model
         model = Sequential()
@@ -90,6 +102,9 @@ class Model(QObject):
         self.model = model
 
     def predict_gesture(self, gesture):
+        '''
+        Predicts input gesture and returns label and confidence.
+        '''
         prediction = self.model.predict(np.array([gesture]))
         prediction_index = np.argmax(prediction)
         prediction_label = self.encoder.inverse_transform(
@@ -99,9 +114,16 @@ class Model(QObject):
 
 
 class TrainingCallback(Callback):
+    '''
+    Helper class to merge custom keras callback and PyQt QThread callback.
+    '''
+
     def __init__(self, progress):
         super().__init__()
         self.progress = progress
 
     def on_epoch_end(self, epoch, logs=None):
+        '''
+        Sends QThread progress signal whenever epoch in training is passed.
+        '''
         self.progress.emit(epoch+1)

@@ -1,3 +1,6 @@
+'''
+This module acts as a PyQt widget manager.
+'''
 import sys
 
 import config
@@ -5,8 +8,8 @@ from augmentation import Augmenter
 from input_widget import InputWidget
 from prediction_widget import PredictionWidget
 from progress_widget import ProgressWidget
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QThread, pyqtSlot
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import QThread
 
 from model import Model
 
@@ -14,13 +17,16 @@ from model import Model
 class ApplicationWindow(QtWidgets.QWidget):
 
     def __init__(self) -> None:
+        '''
+        Sets up PyQt UI elements.
+        '''
         super(ApplicationWindow, self).__init__()
         self.input_view = InputWidget()
         self.prediction_view = PredictionWidget()
         self.progress_view = ProgressWidget()
 
-        self.setMinimumWidth(850)
-        self.setMinimumHeight(1000)
+        self.setFixedWidth(config.WINDOW_WIDTH)
+        self.setFixedHeight(config.WINDOW_HEIGHT)
 
         self.stack = QtWidgets.QStackedWidget()
         self.stack.addWidget(self.input_view)
@@ -36,12 +42,20 @@ class ApplicationWindow(QtWidgets.QWidget):
         self.prediction_view.canvas_wrapper.mouseReleaseEvent = self.handle_stop_drawing
 
     def start_training(self):
+        '''
+        Sets current widget to progress_view if enough gestures were recorded and starts model training.
+        '''
         if len(self.input_view.gestures) > 1:
             print("Training started")
             self.stack.setCurrentWidget(self.progress_view)
             self.get_training_dataset()
 
     def get_training_dataset(self):
+        '''
+        Launches gesture augmentation in new PyQt QThread and adds Callback for progress.
+
+        After https://realpython.com/python-pyqt-qthread/#using-qthread-vs-pythons-threading
+        '''
         gestures = self.input_view.gestures
         self.progress_view.init_progress_bar(
             upper_bound=len(gestures)*config.NUMBER_OF_SAMPLES)
@@ -60,11 +74,17 @@ class ApplicationWindow(QtWidgets.QWidget):
         self.augmenter.finished.connect(self.train_model)
 
     def report_augmentation_progress(self, n):
+        '''
+        Callback method for gesture augmentation progress.
+        '''
         self.progress_view.update_augmentation_progress(n)
 
     def train_model(self, training_set):
+        '''
+        Launches model training in PyQt QThread and adds Callback for progress.
 
-        # After https://realpython.com/python-pyqt-qthread/#using-qthread-vs-pythons-threading
+        After https://realpython.com/python-pyqt-qthread/#using-qthread-vs-pythons-threading
+        '''
         self.progress_view.init_progress_bar(upper_bound=config.MAX_EPOCHS)
         self.training_thread = QThread()
         self.predictor = Model(training_set=training_set)
@@ -79,10 +99,16 @@ class ApplicationWindow(QtWidgets.QWidget):
         self.training_thread.finished.connect(self.change_view_to_prediction)
 
     def change_view_to_prediction(self):
+        '''
+        Sets current widget to prediction_view after model training is finished.
+        '''
         self.stack.setCurrentWidget(self.prediction_view)
 
-    def report_training_progress(self, n):
-        self.progress_view.update_training_progress(n)
+    def report_training_progress(self, step: int):
+        '''
+        Callback method for model training progress.
+        '''
+        self.progress_view.update_training_progress(step)
 
     def handle_stop_drawing(self, event):
         drawn_gesture = self.prediction_view.line
