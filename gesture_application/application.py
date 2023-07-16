@@ -1,13 +1,14 @@
 import sys
-from threading import Thread
 
+import config
+from augmentation import Augmenter
 from input_widget import InputWidget
-from model_worker_thread import Model
 from prediction_widget import PredictionWidget
 from progress_widget import ProgressWidget
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QThread
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import Qt, QThread, pyqtSlot
+
+from model import Model
 
 
 class ApplicationWindow(QtWidgets.QWidget):
@@ -29,7 +30,6 @@ class ApplicationWindow(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.stack)
-        layout.setAlignment(Qt.AlignCenter)
         self.setLayout(layout)
 
         self.input_view.start_button.clicked.connect(self.start_training)
@@ -39,28 +39,41 @@ class ApplicationWindow(QtWidgets.QWidget):
         if len(self.input_view.gestures) > 1:
             print("Training started")
             self.stack.setCurrentWidget(self.progress_view)
-            self.train_model_qthread()
-            # train_model_thread = Thread(target=self.train_model)
-            # train_model_thread.start()
-            # self.change_view_to_prediction()
+            self.get_training_dataset()
 
-    def train_model(self):
-        self.predictor = Model(gestures=self.input_view.gestures,
-                               augmentation_chain=self.input_view.combo_box.currentText())
-        self.predictor.run()
+    def get_training_dataset(self):
+        gestures = self.input_view.gestures
+        self.progress_view.init_progress_bar(
+            upper_bound=len(gestures)*config.NUMBER_OF_SAMPLES)
+        self.dataset_thread = QThread()
+        self.augmenter = Augmenter(gestures=gestures,
+                                   augmentation_chain=self.input_view.combo_box.currentText())
+        self.augmenter.moveToThread(self.dataset_thread)
+        self.dataset_thread.started.connect(self.augmenter.run)
+        self.augmenter.finished.connect(self.dataset_thread.quit)
+        self.augmenter.finished.connect(self.augmenter.deleteLater)
+        self.dataset_thread.finished.connect(
+            self.dataset_thread.deleteLater)
+        self.augmenter.progress.connect(self.report_augmentation_progress)
+        self.dataset_thread.start()
 
-    def train_model_qthread(self):
+        self.augmenter.finished.connect(self.train_model)
+
+    def report_augmentation_progress(self, n):
+        self.progress_view.update_augmentation_progress(n)
+
+    def train_model(self, training_set):
 
         # After https://realpython.com/python-pyqt-qthread/#using-qthread-vs-pythons-threading
+        self.progress_view.init_progress_bar(upper_bound=config.MAX_EPOCHS)
         self.training_thread = QThread()
-        self.predictor = Model(gestures=self.input_view.gestures,
-                               augmentation_chain=self.input_view.combo_box.currentText())
+        self.predictor = Model(training_set=training_set)
         self.predictor.moveToThread(self.training_thread)
         self.training_thread.started.connect(self.predictor.run)
         self.predictor.finished.connect(self.training_thread.quit)
         self.predictor.finished.connect(self.predictor.deleteLater)
         self.training_thread.finished.connect(self.training_thread.deleteLater)
-        self.predictor.progress.connect(self.report_progress)
+        self.predictor.progress.connect(self.report_training_progress)
         self.training_thread.start()
 
         self.training_thread.finished.connect(self.change_view_to_prediction)
@@ -68,8 +81,8 @@ class ApplicationWindow(QtWidgets.QWidget):
     def change_view_to_prediction(self):
         self.stack.setCurrentWidget(self.prediction_view)
 
-    def report_progress(self, n):
-        self.progress_view.update_progress(n)
+    def report_training_progress(self, n):
+        self.progress_view.update_training_progress(n)
 
     def handle_stop_drawing(self, event):
         drawn_gesture = self.prediction_view.line
