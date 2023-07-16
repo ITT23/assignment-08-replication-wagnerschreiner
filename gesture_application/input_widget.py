@@ -65,9 +65,13 @@ class InputWidget(QtWidgets.QWidget):
         layout.addWidget(self.canvas_wrapper, 1, 0, 1, 4)
         layout.addWidget(self.combo_box_label, 2, 0)
         layout.addWidget(self.combo_box, 2, 1)
-        layout.addWidget(self.start_button, 2, 3)
+        layout.addWidget(self.start_button, 2, 3, alignment=Qt.AlignLeft)
         layout.addWidget(self.gesture_list_view, 3, 1)
-        layout.addWidget(self.delete_button, 3, 3)
+        layout.addWidget(self.delete_button, 3, 0,
+                         alignment=Qt.AlignRight | Qt.AlignTop)
+
+        layout.setRowStretch(layout.rowCount(), 1)
+        layout.setColumnStretch(layout.columnCount(), 1)
 
         self.setLayout(layout)
 
@@ -85,9 +89,10 @@ class InputWidget(QtWidgets.QWidget):
         self.update()
 
     def delete_gesture(self):
-        selected_item = self.gesture_list_view.currentRow()
-        del self.gestures[selected_item]
-        self.update_gesture_list()
+        if self.gestures:
+            selected_item = self.gesture_list_view.currentRow()
+            del self.gestures[selected_item]
+            self.update_gesture_list()
 
     def clear_canvas(self):
         self.canvas_wrapper.clear()
