@@ -1,18 +1,13 @@
 import os
-import xml.etree.ElementTree as ET
 
 import config as config
 import numpy as np
-from data_augmentation import Augmenter
 from keras.callbacks import Callback, EarlyStopping, ReduceLROnPlateau
 from keras.layers import GRU, LSTM, BatchNormalization, Dense, Dropout, Input
 from keras.metrics import categorical_crossentropy
 from keras.models import Sequential
 from keras.utils import pad_sequences, to_categorical
-from matplotlib import pyplot as plt
 from PyQt5.QtCore import QObject, pyqtSignal
-from scipy.signal import resample
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
@@ -23,21 +18,14 @@ class Model(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(int)
 
-    def __init__(self, gestures, augmentation_chain):
+    def __init__(self, training_set):
         super().__init__()
 
         self.labels = []
-        self.gestures = gestures
-        self.augmentation_chain = augmentation_chain
-        # self.X_train, self.X_test, self.y_train, self.y_test = self.load_data(
-        #     gestures, augmentation_chain=augmentation_chain)
+        self.training_set = training_set
 
-    def load_data(self, gestures, augmentation_chain):
-        augmenter = Augmenter(gestures=gestures)
-        if augmentation_chain == config.AugmentationPipelines.AVC.value:
-            training_set = augmenter.get_avc_set()
-
-        self.labels = [sample[0] for sample in training_set]
+    def load_data(self):
+        self.labels = [sample[0] for sample in self.training_set]
         print(set(self.labels))
 
         self.encoder = LabelEncoder()
@@ -47,7 +35,7 @@ class Model(QObject):
         y = to_categorical(labels_encoded)
         print(len(y[0]))
 
-        sequences = [sample[1] for sample in training_set]
+        sequences = [sample[1] for sample in self.training_set]
         sequences = pad_sequences(
             sequences, padding="pre", dtype='float32'
         )
@@ -59,8 +47,7 @@ class Model(QObject):
         return X_train, X_test, y_train, y_test
 
     def run(self):
-        self.X_train, self.X_test, self.y_train, self.y_test = self.load_data(
-            self.gestures, augmentation_chain=self.augmentation_chain)
+        self.X_train, self.X_test, self.y_train, self.y_test = self.load_data()
         # Define the model
         model = Sequential()
 
@@ -90,7 +77,7 @@ class Model(QObject):
         history = model.fit(
             self.X_train,
             self.y_train,
-            epochs=30,
+            epochs=config.MAX_EPOCHS,
             batch_size=512,
             validation_data=(self.X_test, self.y_test),
             verbose=1,
