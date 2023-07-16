@@ -25,3 +25,4 @@ class AugmentationPipelines(Enum):
     AVC = "AVC"
     SIMPLE = "Simple Chain"
     GAUSSIAN = "Gaussian"
+    NONE = "None"

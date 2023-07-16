@@ -39,6 +39,9 @@ class Augmenter(QObject):
                 if self.augmentation_chain == config.AugmentationPipelines.GAUSSIAN.value:
                     training_set.append(
                         [label, self.add_gaussian_noise(original_points)])
+                if self.augmentation_chain == config.AugmentationPipelines.NONE.value:
+                    training_set.append(
+                        [label, original_points])
                 counter += 1
                 self.progress.emit(counter)
         self.finished.emit(training_set)
