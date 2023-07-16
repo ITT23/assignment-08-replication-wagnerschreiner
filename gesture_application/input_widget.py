@@ -1,3 +1,6 @@
+'''
+This module contains PyQt UI elements for the initial gesture input.
+'''
 import config as config
 import numpy as np
 from PyQt5 import QtGui, QtWidgets
@@ -10,12 +13,14 @@ class InputWidget(QtWidgets.QWidget):
         super().__init__()
         self.setup_UI()
 
-        # Globals
         self.gestures = []
         self.line = []
         self.last_x, self.last_y = None, None
 
     def setup_UI(self):
+        '''
+        Initializes UI elements.
+        '''
         layout = QtWidgets.QGridLayout()
 
         self.input_label = QtWidgets.QLabel("Gesture Name:")
@@ -76,6 +81,9 @@ class InputWidget(QtWidgets.QWidget):
         self.setLayout(layout)
 
     def confirm(self):
+        '''
+        Stores gesture as label and list of points when confirm button is pressed.
+        '''
         text = self.gesture_name_input.text()
         if text and self.line:
             self.gestures.append([text, np.array(self.line, dtype=float)])
@@ -83,18 +91,27 @@ class InputWidget(QtWidgets.QWidget):
             self.update_gesture_list()
 
     def update_gesture_list(self):
+        '''
+        Creates list items for each gesture in gesture list.
+        '''
         self.gesture_list_view.clear()
         for gesture in self.gestures:
             QtWidgets.QListWidgetItem(gesture[0], self.gesture_list_view)
         self.update()
 
     def delete_gesture(self):
+        '''
+        Deletes gesture from gesture list.
+        '''
         if self.gestures:
             selected_item = self.gesture_list_view.currentRow()
             del self.gestures[selected_item]
             self.update_gesture_list()
 
     def clear_canvas(self):
+        '''
+        Resets canvas and saved lines.
+        '''
         self.canvas_wrapper.clear()
         self.canvas_wrapper.setPixmap(self.canvas)
         self.update()
@@ -104,10 +121,13 @@ class InputWidget(QtWidgets.QWidget):
         self.gesture_name_input.clear()
 
     def draw(self, e):
-        if self.last_x is None:  # First event.
+        '''
+        Connects points on canvas if mouse is dragged across it.
+        '''
+        if self.last_x is None:
             self.last_x = e.x()
             self.last_y = e.y()
-            return  # Ignore the first time.
+            return
 
         self.painter = QtGui.QPainter(self.canvas_wrapper.pixmap())
         p = self.painter.pen()
@@ -117,13 +137,14 @@ class InputWidget(QtWidgets.QWidget):
         self.painter.end()
         self.update()
 
-        # save drawn points
         self.line.append([e.x(), e.y()])
 
-        # Update the origin for next time.
         self.last_x = e.x()
         self.last_y = e.y()
 
     def mouseReleaseEvent(self, event):
+        '''
+        Ends drawn shape by resetting last points on mouse button release.
+        '''
         self.last_x = None
         self.last_y = None

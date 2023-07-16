@@ -1,3 +1,6 @@
+'''
+This module contains PyQt UI elements for gesture prediction.
+'''
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
@@ -12,6 +15,9 @@ class PredictionWidget(QtWidgets.QWidget):
         self.last_x, self.last_y = None, None
 
     def setup_UI(self):
+        '''
+        Initializes UI elements.
+        '''
         layout = QtWidgets.QVBoxLayout()
 
         self.prediction_label = QtWidgets.QLabel()
@@ -30,25 +36,34 @@ class PredictionWidget(QtWidgets.QWidget):
         self.setLayout(layout)
 
     def clear_canvas(self):
+        '''
+        Resets canvas and saved lines.
+        '''
         self.canvas_wrapper.clear()
         self.canvas_wrapper.setPixmap(self.canvas)
         self.update()
-
-        # set everything to default again
         self.line = []
         self.last_x = None
         self.last_y = None
 
     def show_prediction(self, gesture, confidence):
+        '''
+        Displays predicted label for input gesture.
+
+        Prediction display is managed by application.py
+        '''
         self.prediction_label.setText(
             f'Gesture is {gesture} ({round(confidence, 2)}%)')
         self.update()
 
     def draw(self, e):
-        if self.last_x is None:  # First event.
+        '''
+        Connects points on canvas if mouse is dragged across it.
+        '''
+        if self.last_x is None:
             self.last_x = e.x()
             self.last_y = e.y()
-            return  # Ignore the first time.
+            return
 
         self.painter = QtGui.QPainter(self.canvas_wrapper.pixmap())
         p = self.painter.pen()
@@ -58,9 +73,7 @@ class PredictionWidget(QtWidgets.QWidget):
         self.painter.end()
         self.update()
 
-        # save drawn points
         self.line.append([e.x(), e.y()])
 
-        # Update the origin for next time.
         self.last_x = e.x()
         self.last_y = e.y()

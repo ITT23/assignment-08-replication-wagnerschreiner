@@ -1,3 +1,6 @@
+'''
+This module augments a limited dataset of gestures to create a large dataset for RNN training.
+'''
 import config
 import numpy as np
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -16,6 +19,11 @@ class Augmenter(QObject):
         self.augmentation_chain = augmentation_chain
 
     def run(self):
+        '''
+        Creates training set depending on selected augmentation pipeline.
+
+        Returns training_set via PyQt signal
+        '''
         training_set = []
         counter = 0
         for gesture in self.gestures:
@@ -36,6 +44,9 @@ class Augmenter(QObject):
         self.finished.emit(training_set)
 
     def avc_transformation(self, sequence):
+        '''
+        Augments sequence of points after AVC pipeline as described in https://www.eecs.ucf.edu/~jjl/pubs/Mykola-CHI23.pdf
+        '''
         noise_seq = self.add_gaussian_noise(sequence)
         skipped_seq = self.skip_frames(noise_seq)
         resampled_seq = self.spatial_resampling(skipped_seq)
@@ -45,21 +56,27 @@ class Augmenter(QObject):
         return scaled_seq
 
     def simple_transformation(self, sequence):
+        '''
+        Augments sequence of points after Simple Chain pipeline as described in https://www.eecs.ucf.edu/~jjl/pubs/Mykola-CHI23.pdf
+        '''
         rotated_seq = self.rotate(sequence)
         scaled_seq = self.scaling(rotated_seq)
         gaussian_seq = self.add_gaussian_noise(scaled_seq)
         return gaussian_seq
 
-    # add noise (uniform, gaussian, perlin noise)
     def add_gaussian_noise(self, sequence):
-        # the authors use sigma=0.08
+        '''
+        Adds noise to sequence of points
+        '''
         noise = np.random.normal(
             0, config.GAUSSIAN_NOISE_SIGMA, sequence.shape)
         noise_seq = sequence + noise
         return noise_seq
 
-    # scaling
     def scaling(self, sequence):
+        '''
+        Scales sequence of points in x and y direction by random amount
+        '''
         centroid = np.mean(sequence)
         rnd_x = np.random.uniform(
             config.SCALING_LOWER_BOUND, config.SCALING_UPPER_BOUND)
@@ -74,14 +91,18 @@ class Augmenter(QObject):
         scaled_seq += centroid
         return scaled_seq
 
-    # spatial resampling: generate list of distance intervals & using the list to sample points along the trajectory
     def spatial_resampling(self, sequence):
+        '''
+        Generates list of distance intervals and samples points along trajectory
+        '''
         resampled_seq = resample(sequence, np.random.randint(
             config.SPATIAL_RESAMPLING_LOWER_BOUND, len(sequence)*2))
         return np.array(resampled_seq)
 
-    # perspective change: rotating the trajectory around the x and y axes (adding 3rd dimension & multiplying points by the x and y rotation matrices)
     def perspective_change(self, sequence):
+        '''
+        Rotates trajectory around x and y axes
+        '''
         persp_seq = []
         centroid = np.mean(sequence)
         y_angle = np.random.randint(
@@ -98,16 +119,20 @@ class Augmenter(QObject):
         persp_seq += centroid
         return persp_seq
 
-    # frame skipping: removal of some points from the trajectory
     def skip_frames(self, sequence):
+        '''
+        Removes points from trajectory
+        '''
         skipped_seq = []
         for point in sequence:
             if np.random.uniform(low=0, high=1.0) >= config.SKIP_FRAME_CHANCE:
                 skipped_seq.append(point)
         return np.asarray(skipped_seq)
 
-    # rotation
     def rotate(self, sequence):
+        '''
+        Rotates trajectory around centroid
+        '''
         centroid = np.mean(sequence)
         points = sequence - centroid
         angle = np.random.randint(
