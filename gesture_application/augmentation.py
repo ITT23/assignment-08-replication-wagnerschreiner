@@ -122,15 +122,3 @@ class Augmenter(QObject):
             points_transformed.append(result[:-1])
         points_transformed += centroid
         return points_transformed
-
-    # shearing: results in stretching of the original trajectory along a line
-
-    # temporal resampling: list of intervals in time domain
-
-    # temporal jitter: special case of temporal resampling with varying intervals
-
-    # time stretching: duplicating random subset of points in a trajectory
-
-    # bezier and spline deformation: finding reasonable control points, pertubing them and fitting the new points to a spline curve
-
-    # random erasing: replace some of the trajectory with values of 0
