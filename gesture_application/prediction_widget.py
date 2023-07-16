@@ -25,6 +25,7 @@ class PredictionWidget(QtWidgets.QWidget):
 
         layout.addWidget(self.prediction_label)
         layout.addWidget(self.canvas_wrapper)
+        layout.addStretch(1)
 
         self.setLayout(layout)
 
