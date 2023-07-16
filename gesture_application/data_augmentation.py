@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import resample
 from scipy.spatial.transform import Rotation as R
 
-import config
+import gesture_application.config as config
 
 
 class Augmenter():
@@ -100,7 +100,6 @@ class Augmenter():
             points_transformed.append(result[:-1])
         points_transformed += centroid
         return points_transformed
-
 
     # shearing: results in stretching of the original trajectory along a line
 
