@@ -1,23 +1,39 @@
+import config
 import numpy as np
+from PyQt5.QtCore import QObject, pyqtSignal
 from scipy.signal import resample
 from scipy.spatial.transform import Rotation as R
 
-import gesture_application.config as config
 
+class Augmenter(QObject):
+    finished = pyqtSignal(list)
+    progress = pyqtSignal(int)
 
-class Augmenter():
-    def __init__(self, gestures) -> None:
+    def __init__(self, gestures, augmentation_chain) -> None:
+        super().__init__()
+
         self.gestures = gestures
+        self.augmentation_chain = augmentation_chain
 
-    def get_avc_set(self):
+    def run(self):
         training_set = []
+        counter = 0
         for gesture in self.gestures:
             label = gesture[0]
             original_points = gesture[1]
             for i in range(config.NUMBER_OF_SAMPLES):
-                training_set.append(
-                    [label, self.avc_transformation(original_points)])
-        return training_set
+                if self.augmentation_chain == config.AugmentationPipelines.AVC.value:
+                    training_set.append(
+                        [label, self.avc_transformation(original_points)])
+                if self.augmentation_chain == config.AugmentationPipelines.SIMPLE.value:
+                    training_set.append(
+                        [label, self.simple_transformation(original_points)])
+                if self.augmentation_chain == config.AugmentationPipelines.GAUSSIAN.value:
+                    training_set.append(
+                        [label, self.add_gaussian_noise(original_points)])
+                counter += 1
+                self.progress.emit(counter)
+        self.finished.emit(training_set)
 
     def avc_transformation(self, sequence):
         noise_seq = self.add_gaussian_noise(sequence)
@@ -27,6 +43,12 @@ class Augmenter():
         rotated_seq = self.rotate(persp_seq)
         scaled_seq = self.scaling(rotated_seq)
         return scaled_seq
+
+    def simple_transformation(self, sequence):
+        rotated_seq = self.rotate(sequence)
+        scaled_seq = self.scaling(rotated_seq)
+        gaussian_seq = self.add_gaussian_noise(scaled_seq)
+        return gaussian_seq
 
     # add noise (uniform, gaussian, perlin noise)
     def add_gaussian_noise(self, sequence):
