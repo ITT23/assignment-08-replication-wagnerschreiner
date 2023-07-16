@@ -10,8 +10,10 @@ ROTATION_MIN_ANGLE = -20
 ROTATION_MAX_ANGLE = 20
 SKIP_FRAME_CHANCE = 0.3
 NUMBER_OF_SAMPLES = 512
+MAX_EPOCHS = 30
 
 
 class AugmentationPipelines(Enum):
     AVC = "AVC"
     SIMPLE = "Simple Chain"
+    GAUSSIAN = "Gaussian"
